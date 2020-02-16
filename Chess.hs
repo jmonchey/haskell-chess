@@ -56,8 +56,8 @@ initialBoard =
     blackKingRow = kingRow Black
   in
     [whiteKingRow, whitePawnRow]
-      ++ middleRows
-      ++ [blackPawnRow, blackKingRow]
+    ++ middleRows
+    ++ [blackPawnRow, blackKingRow]
 
 kingRow :: Colour -> [Square]
 kingRow colour =
@@ -111,56 +111,33 @@ lastMoveEq from to history =
       _ -> False
 
 pawnMoves :: Colour -> Location -> Board -> MoveHistory -> [Location]
-pawnMoves colour location@(row, col) board history =
-  let
-    advanceOneLocation =
-      if canAdvanceOne then
-        [(row + dy, col)]
-      else
-        []
-    
-    advanceTwoLocation =
-      if canAdvanceOne then
-        [(row + dy * 2, col)]
-      else
-        []
-    
-    captureLeftLocation =
-      if canCaptureLeft then
-        [(row + dy, col - 1)]
-      else
-        []
-    
-    captureRightLocation =
-      if canCaptureRight then
-        [(row + dy, col + 1)]
-      else
-        []
-  
-  in
+pawnMoves colour (row, col) board history =
     advanceOneLocation
     ++ advanceTwoLocation
     ++ captureLeftLocation
     ++ captureRightLocation
 
   where
-    onStartingRank = case colour of
-      White -> row == 1
-      _ -> row == 6
+    onStartingRank =
+      case colour of
+        White -> row == 1
+        _ -> row == 6
 
-    dy = case colour of
-      White -> 1
-      _ -> -1
+    dy =
+      case colour of
+        White -> 1
+        _ -> -1
 
     canAdvanceOne = emptyAt (row + dy, col) board
 
     canAdvanceTwo = onStartingRank && emptyAt (row + dy * 2, col) board
 
-    onEnPassantRank = case colour of
-      White -> row == 5
-      _ -> row == 4
+    onEnPassantRank =
+      case colour of
+        White -> row == 5
+        _ -> row == 4
 
-    enPassantSource colour col =
+    enPassantSource col =
       case colour of
         White -> ((6, col), (4, col))
         _ -> ((1, col), (3, col))
@@ -179,7 +156,7 @@ pawnMoves colour location@(row, col) board history =
       if canMove direction then
         let
           dx = dxForDirection direction
-          (from, to) = enPassantSource colour $ col + dx
+          (from, to) = enPassantSource $ col + dx
         in
           lastMoveEq from to history
       else
@@ -205,3 +182,27 @@ pawnMoves colour location@(row, col) board history =
     canCaptureLeft = canCapture MoveLeft || canEnPassantLeft
 
     canCaptureRight = canCapture MoveRight || canEnPassantRight
+
+    advanceOneLocation =
+      if canAdvanceOne then
+        [(row + dy, col)]
+      else
+        []
+    
+    advanceTwoLocation =
+      if canAdvanceTwo then
+        [(row + dy * 2, col)]
+      else
+        []
+    
+    captureLeftLocation =
+      if canCaptureLeft then
+        [(row + dy, col - 1)]
+      else
+        []
+    
+    captureRightLocation =
+      if canCaptureRight then
+        [(row + dy, col + 1)]
+      else
+        []
