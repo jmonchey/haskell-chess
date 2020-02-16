@@ -149,7 +149,7 @@ pawnMoves colour (row, col) board history =
 
     dxForDirection direction =
       case direction of
-        MoveLeft -> 1
+        MoveLeft -> -1
         _ -> 1
 
     canEnPassant direction =
@@ -169,10 +169,7 @@ pawnMoves colour (row, col) board history =
     canCapture direction =
       if canMove direction then
         let
-          rowTo = case colour of
-            White -> row + 1
-            _ -> row - 1
-
+          rowTo = row + dy
           colTo = col + dxForDirection direction
         in
           enemyAt colour (rowTo, colTo) board
