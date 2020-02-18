@@ -41,7 +41,7 @@ data Move = Move
 
 type MoveHistory = [Move]
 
-data HorizontalDirection
+data HorizontalMove
   = MoveLeft
   | MoveRight
   deriving (Show, Eq)
