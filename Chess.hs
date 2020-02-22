@@ -101,8 +101,8 @@ lastMove :: MoveHistory -> Maybe Move
 lastMove moves@(x:xs) = Just $ last moves
 lastMove _ = Nothing
 
-lastMoveIs :: Location -> Location -> MoveHistory -> Bool
-lastMoveIs from to history =
+lastMoveWas :: Location -> Location -> MoveHistory -> Bool
+lastMoveWas from to history =
   let
     previousMove = lastMove history
   in
@@ -158,7 +158,7 @@ pawnMoves colour (row, col) board history =
           dx = dxForDirection direction
           (from, to) = enPassantSource $ col + dx
         in
-          lastMoveIs from to history
+          lastMoveWas from to history
       else
         False
 
