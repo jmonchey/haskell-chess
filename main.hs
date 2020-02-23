@@ -1,6 +1,7 @@
 import Chess
 
-main = print msquareAt
+first = 8
+main = print [0 ,(0 - 1)..0]
 
 msquareAt =
   let

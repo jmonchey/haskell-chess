@@ -203,3 +203,92 @@ pawnMoves colour (row, col) board history =
         [(row + dy, col + 1)]
       else
         []
+
+rookMoves :: Colour -> Location -> Board -> [Location]
+rookMoves colour location board =
+  let
+    locationsLeft = lineLocations location (-1) 0
+    movesLeft = possibleLineMoves colour locationsLeft board
+    locationsRight = lineLocations location 1 0
+    movesRight = possibleLineMoves colour locationsRight board
+    locationsUp = lineLocations location 0 1
+    movesUp = possibleLineMoves colour locationsUp board
+    locationsDown = lineLocations location 0 (-1)
+    movesDown = possibleLineMoves colour locationsDown board
+  in
+    movesLeft ++ movesRight ++ movesUp ++ movesDown
+
+lineLocations :: Location -> Int -> Int -> [Location]
+lineLocations (row, col) dx dy =
+  let
+    endX =
+      case dx of
+        -1 -> 0
+        1 -> 7
+        _ -> col
+
+    endY =
+      case dy of
+        -1 -> 0
+        1 -> 7
+        _ -> row
+
+    x1 = col + dx
+    x2 = col + dx * 2
+    y1 = row + dy
+    y2 = row + dy * 2
+  in
+    zip [y1,y2..endY] [x1,x2..endX]
+
+possibleLineMoves :: Colour -> [Location] -> Board -> [Location]
+possibleLineMoves colour locations board =
+  snd $ foldr canMoveTo (False, []) $ reverse locations
+
+  where
+    canMoveTo _ result@(True, _) = result
+    canMoveTo location (_, xs) =
+      if emptyAt location board then
+        (False, location:xs)
+      else
+        if enemyAt colour location board then
+          (True, location:xs)
+        else
+          (True, xs)
+
+bishopMoves :: Colour -> Location -> Board -> [Location]
+bishopMoves colour location board =
+  let
+    locationsUpLeft = lineLocations location (-1) 1
+    movesUpLeft = possibleLineMoves colour locationsUpLeft board
+    locationsUpRight = lineLocations location 1 1
+    movesUpRight = possibleLineMoves colour locationsUpRight board
+    locationsDownLeft = lineLocations location (-1) (-1)
+    movesDownLeft = possibleLineMoves colour locationsDownLeft board
+    locationsDownRight = lineLocations location 1 (-1)
+    movesDownRight = possibleLineMoves colour locationsDownRight board
+  in
+    movesUpLeft ++ movesUpRight ++ movesDownLeft ++ movesDownRight
+
+queenMoves :: Colour -> Location -> Board -> [Location]
+queenMoves colour location board =
+  rookMoves colour location board ++ bishopMoves colour location board
+
+knightMoves :: Colour -> Location -> Board -> [Location]
+knightMoves colour (row, col) board =
+  filter canMoveTo validLocations
+
+  where
+    isValidLocation (row, col) =
+      row >= 0 && row <=7 && col >= 0 && col <= 7
+
+    displacements =
+      [(-2, 1), (-1, 2), (2, 1), (1, 2), (-2, -1), (-1, -2), (2, -1), (1, -2)]
+
+    locations =
+      map (\(dx, dy) -> (row + dy, col + dx)) displacements
+
+    validLocations =
+      filter isValidLocation locations
+
+    canMoveTo location =
+      emptyAt location board || enemyAt colour location board
