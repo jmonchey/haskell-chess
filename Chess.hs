@@ -110,8 +110,8 @@ lastMoveWas from to history =
       Just (Move {from = f, to = t}) -> from == f && to == t
       _ -> False
 
-pawnMoves :: Colour -> Location -> Board -> MoveHistory -> [Location]
-pawnMoves colour (row, col) board history =
+pawnMoves :: Colour -> Location -> Bool -> MoveHistory -> Board -> [Location]
+pawnMoves colour (row, col) onlyCaptures history board =
     advanceOneLocation
     ++ advanceTwoLocation
     ++ captureLeftLocation
@@ -181,13 +181,13 @@ pawnMoves colour (row, col) board history =
     canCaptureRight = canCapture MoveRight || canEnPassantRight
 
     advanceOneLocation =
-      if canAdvanceOne then
+      if canAdvanceOne && not onlyCaptures then
         [(row + dy, col)]
       else
         []
     
     advanceTwoLocation =
-      if canAdvanceTwo then
+      if canAdvanceTwo && not onlyCaptures then
         [(row + dy * 2, col)]
       else
         []
@@ -274,21 +274,144 @@ queenMoves colour location board =
   rookMoves colour location board ++ bishopMoves colour location board
 
 knightMoves :: Colour -> Location -> Board -> [Location]
-knightMoves colour (row, col) board =
-  filter canMoveTo validLocations
+knightMoves colour location board =
+  filter (canMoveTo colour board) $ validLocations locations
+
+  where
+    displacements =
+      [(-2, 1), (-1, 2), (2, 1), (1, 2), (-2, -1), (-1, -2), (2, -1), (1, -2)]
+
+    locations =
+      map (displace location)  displacements
+
+type Displacement = (Int, Int)
+
+displace :: Location -> Displacement -> Location
+displace (row, col) (dx, dy) =
+  (row + dy, col + dx)
+
+validLocations :: [Location] -> [Location]
+validLocations =
+  filter isValidLocation
 
   where
     isValidLocation (row, col) =
       row >= 0 && row <=7 && col >= 0 && col <= 7
 
+canMoveTo :: Colour -> Board -> Location -> Bool
+canMoveTo colour board to =
+  emptyAt to board || enemyAt colour to board
+
+kingMoves :: Colour -> Location -> Bool -> MoveHistory -> Board -> [Location]
+kingMoves colour location onlyCaptures history board =
+  normalMoves ++ castleKingSideMove ++ castleQueenSideMove
+
+  where
     displacements =
-      [(-2, 1), (-1, 2), (2, 1), (1, 2), (-2, -1), (-1, -2), (2, -1), (1, -2)]
+      [(-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1)]
 
     locations =
-      map (\(dx, dy) -> (row + dy, col + dx)) displacements
+      map (displace location) displacements
 
-    validLocations =
-      filter isValidLocation locations
+    normalMoves =
+      filter (canMoveTo colour board) $ validLocations locations
 
-    canMoveTo location =
-      emptyAt location board || enemyAt colour location board
+    castleKingSide = canCastleKingSide colour history board
+
+    castleQueenSide = canCastleQueenSide colour history board
+    
+    castleKingSideMove =
+      if castleKingSide && not onlyCaptures then
+        [displace location (-2, 0)]
+      else
+        []
+
+    castleQueenSideMove =
+      if castleQueenSide && not onlyCaptures then
+        [displace location (2, 0)]
+      else
+        []
+
+canCastle :: Colour -> HorizontalMove -> MoveHistory -> Board -> Bool
+canCastle colour direction history board =
+  not haveMoved && not inCheck && not hasThreats
+
+  where
+    kingLocation =
+      case colour of
+        White -> (0, 3)
+        _ -> (7, 3)
+    
+    rookLocation =
+      case colour of
+        White -> (0, 7)
+        _ -> (7, 7)
+
+    haveMoved =
+      pieceMoved kingLocation history || pieceMoved rookLocation history
+
+    inCheck =
+      isThreatened colour history board kingLocation
+
+    dx =
+      case direction of
+        MoveLeft -> -1
+        _ -> 1
+
+    displacements =
+      [(dx, 0), (dx * 2, 0)]
+
+    targetLocations =
+      map (displace kingLocation) displacements
+
+    hasThreats =
+      any (isThreatened colour history board) targetLocations
+
+canCastleQueenSide :: Colour -> MoveHistory -> Board -> Bool
+canCastleQueenSide colour history board =
+  canCastle colour MoveRight history board
+
+canCastleKingSide :: Colour -> MoveHistory -> Board -> Bool
+canCastleKingSide colour history board =
+  canCastle colour MoveLeft history board
+
+pieceMoved :: Location -> MoveHistory -> Bool
+pieceMoved location history =
+  any isFromOrTo history
+
+  where
+    isFromOrTo (Move {from = from, to = to}) =
+      location == from || location == to
+
+enemyPieces :: Colour -> Board -> [(Piece, Location)]
+enemyPieces colour board =
+  undefined
+
+possibleMoves :: Piece -> Location -> Bool -> MoveHistory -> Board -> [Location]
+possibleMoves piece location onlyCaptures history board =
+  case piece of
+    Piece colour Pawn -> pawnMoves colour location onlyCaptures history board
+    Piece colour Rook -> rookMoves colour location board
+    Piece colour Bishop -> bishopMoves colour location board
+    Piece colour Queen -> queenMoves colour location board
+    Piece colour King -> kingMoves colour location onlyCaptures history board
+
+isThreatened :: Colour -> MoveHistory -> Board -> Location -> Bool
+isThreatened colour history board location =
+  location `elem` threatLocations
+
+  where
+    enemies = enemyPieces colour board
+
+    enemyMoves (piece, enemyLocation) =
+      possibleMoves piece enemyLocation True history board
+
+    threatLocations = concat $ map enemyMoves enemies
+
+findKing :: Colour -> Board -> Location
+findKing colour board =
+  undefined
+
+makeMove :: Location -> Location -> MoveHistory -> Board -> Board
+makeMove from to history board =
+  undefined
