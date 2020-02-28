@@ -75,23 +75,23 @@ emptyRow :: [Square]
 emptyRow =
   take 8 . repeat $ Square Nothing
 
-squareAt :: Location -> Board -> Square
-squareAt (row, col) board =
+squareAt :: Board -> Location -> Square
+squareAt board (row, col) =
   (board !! row) !! col
 
-emptyAt :: Location -> Board -> Bool
-emptyAt location board =
+emptyAt :: Board -> Location -> Bool
+emptyAt board location =
   let
-    square = squareAt location board
+    square = squareAt board location
   in
     case square of
       Square Nothing -> True
       _ -> False
 
-enemyAt :: Colour -> Location -> Board -> Bool
-enemyAt colour location board =
+enemyAt :: Colour -> Board -> Location -> Bool
+enemyAt colour board location =
   let
-    square = squareAt location board
+    square = squareAt board location
   in
     case square of
       Square (Just (Piece colourAt _)) -> colour /= colourAt
@@ -128,9 +128,9 @@ pawnMoves colour (row, col) onlyCaptures history board =
         White -> 1
         _ -> -1
 
-    canAdvanceOne = emptyAt (row + dy, col) board
+    canAdvanceOne = emptyAt board (row + dy, col)
 
-    canAdvanceTwo = onStartingRank && emptyAt (row + dy * 2, col) board
+    canAdvanceTwo = onStartingRank && emptyAt board (row + dy * 2, col)
 
     onEnPassantRank =
       case colour of
@@ -172,7 +172,7 @@ pawnMoves colour (row, col) onlyCaptures history board =
           rowTo = row + dy
           colTo = col + dxForDirection direction
         in
-          enemyAt colour (rowTo, colTo) board
+          enemyAt colour board (rowTo, colTo)
       else
         False
 
@@ -247,10 +247,10 @@ possibleLineMoves colour locations board =
   where
     canMoveTo _ result@(True, _) = result
     canMoveTo location (_, xs) =
-      if emptyAt location board then
+      if emptyAt board location then
         (False, location:xs)
       else
-        if enemyAt colour location board then
+        if enemyAt colour board location then
           (True, location:xs)
         else
           (True, xs)
@@ -300,7 +300,7 @@ validLocations =
 
 canMoveTo :: Colour -> Board -> Location -> Bool
 canMoveTo colour board to =
-  emptyAt to board || enemyAt colour to board
+  emptyAt board to || enemyAt colour board to
 
 kingMoves :: Colour -> Location -> Bool -> MoveHistory -> Board -> [Location]
 kingMoves colour location onlyCaptures history board =
@@ -385,7 +385,28 @@ pieceMoved location history =
 
 enemyPieces :: Colour -> Board -> [(Piece, Location)]
 enemyPieces colour board =
-  undefined
+  foldr addPiece [] enemies
+
+  where
+    locations =
+      zip [0..7] [0..7]
+
+    toLocationSquare location =
+      (location, squareAt board location)
+
+    enemyLocationSquare (location, _) =
+      enemyAt colour board location
+
+    enemies =
+      filter enemyLocationSquare $ map toLocationSquare locations
+
+    addPiece (location, Square (Just piece)) pieces =
+      (piece, location):pieces
+    addPiece _ pieces = pieces
+
+allyPieces :: Colour -> Board -> [(Piece, Location)]
+allyPieces White board = enemyPieces Black board
+allyPieces _ board = enemyPieces White board
 
 possibleMoves :: Piece -> Location -> Bool -> MoveHistory -> Board -> [Location]
 possibleMoves piece location onlyCaptures history board =
@@ -410,7 +431,13 @@ isThreatened colour history board location =
 
 findKing :: Colour -> Board -> Location
 findKing colour board =
-  undefined
+  foldr isKing (0, 0) pieces
+
+  where
+    pieces = allyPieces colour board
+
+    isKing (Piece _ King, location) _ = location
+    isKing _ location = location
 
 makeMove :: Location -> Location -> MoveHistory -> Board -> Board
 makeMove from to history board =
