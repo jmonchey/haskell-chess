@@ -343,9 +343,11 @@ canCastle colour direction history board =
         _ -> (7, 3)
     
     rookLocation =
-      case colour of
-        White -> (0, 7)
-        _ -> (7, 7)
+      case (colour, direction) of
+        (White, MoveLeft) -> (0, 0)
+        (White, MoveRight) -> (0, 7)
+        (Black, MoveLeft) -> (7, 0)
+        (Black, MoveRight) -> (7, 7)
 
     haveMoved =
       pieceMoved kingLocation history || pieceMoved rookLocation history
